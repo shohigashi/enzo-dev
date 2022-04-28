@@ -37,15 +37,10 @@ int grid::UpdateMHDPrim(float **dU, float c1, float c2)
   }
 
   int DensNum, GENum, TENum, Vel1Num, Vel2Num, Vel3Num, 
-    B1Num, B2Num, B3Num, PhiNum, CRNum;
+    B1Num, B2Num, B3Num, PhiNum;
 
   this->IdentifyPhysicalQuantities(DensNum, GENum, Vel1Num, Vel2Num, 
 				   Vel3Num, TENum, B1Num, B2Num, B3Num, PhiNum);
-
-  if (CRModel) {
-    if ((CRNum = FindField(CRDensity, FieldType, NumberOfBaryonFields)) < 0)
-      ENZO_FAIL("Cannot Find Cosmic Rays");
-  }
 
   int i, j, k, n, n_dU, dim, igrid, field, size, activesize;
   for (dim = 0, size = 1; dim < GridRank; dim++) {
@@ -138,7 +133,7 @@ int grid::UpdateMHDPrim(float **dU, float c1, float c2)
     rho, vx, vy, vz, e, etot, Tau, eint, p, v2,
     D_new, S1_new, S2_new, S3_new, Tau_new, h, cs, dpdrho, dpde, Eint_new,
     Bx_old, By_old, Bz_old, Bx, By, Bz, Bx_new, By_new, Bz_new,
-    Phi_old, Phi, Phi_new, B2, ecr_old, ecr, ECR_new;
+    Phi_old, Phi, Phi_new, B2;
 
   float rhou, lenu, tempu, tu, velu;
   GetUnits(&rhou, &lenu, &tempu, &tu, &velu, Time);
@@ -167,9 +162,6 @@ int grid::UpdateMHDPrim(float **dU, float c1, float c2)
 	By_old   = OldBaryonField[B2Num][igrid];
 	Bz_old   = OldBaryonField[B3Num][igrid];
 	Phi_old  = OldBaryonField[PhiNum][igrid];
-	if (CRModel){
-          ecr_old = OldBaryonField[CRNum][igrid];
-	}
 
 	rho  = BaryonField[DensNum][igrid];
 	vx   = BaryonField[Vel1Num][igrid];
@@ -184,9 +176,6 @@ int grid::UpdateMHDPrim(float **dU, float c1, float c2)
 	By   = BaryonField[B2Num][igrid];
 	Bz   = BaryonField[B3Num][igrid];
 	Phi  = BaryonField[PhiNum ][igrid];
-        if (CRModel){
-          ecr = BaryonField[CRNum][igrid];
-	}
 
 	D_new   = c1*rho_old + (1.0-c1)*rho + c2*dU[iD][n];
 	S1_new  = c1*rho_old*vx_old + (1.0-c1)*rho*vx + c2*dU[iS1][n];
@@ -200,8 +189,6 @@ int grid::UpdateMHDPrim(float **dU, float c1, float c2)
 	if (DualEnergyFormalism) {
 	  Eint_new = c1*rho_old*eint_old + (1.0-c1)*rho*eint + c2*dU[iEint][n];
 	}
-	if (CRModel)
-          ECR_new = c1*ecr_old + (1.0-c1)*ecr + c2*dU[iCR][n];
 
 	if (D_new < 0 || isnan(D_new)) {
 
@@ -219,12 +206,7 @@ int grid::UpdateMHDPrim(float **dU, float c1, float c2)
 	vy = S2_new/D_new;
 	vz = S3_new/D_new;
 	etot = Tau_new/D_new;
-        if (CRModel){
-          if ((ECR_new < CRdensFloor) || isnan(ECR_new))
-            ecr = CRdensFloor;
-          else
-            ecr = ECR_new;
-        }
+
 	
 	if (etot < 0 && EOSType == 0) {
 	  float v2_old = vx_old*vx_old + vy_old*vy_old + vz_old*vz_old;
@@ -246,6 +228,7 @@ int grid::UpdateMHDPrim(float **dU, float c1, float c2)
 	
 
 	BaryonField[DensNum][igrid] = D_new;
+
 	BaryonField[Vel1Num][igrid] = vx;
 	BaryonField[Vel2Num][igrid] = vy;
 	BaryonField[Vel3Num][igrid] = vz;
@@ -254,8 +237,7 @@ int grid::UpdateMHDPrim(float **dU, float c1, float c2)
 	BaryonField[B2Num][igrid] = By_new;
 	BaryonField[B3Num][igrid] = Bz_new;
 	BaryonField[PhiNum][igrid] = Phi_new*exp(-c1*dtFixed*pow(C_h/C_p,2));
-	if (CRModel)
-          BaryonField[CRNum][igrid] = ecr;
+
 
 	if (DualEnergyFormalism) {
 	  v2 = vx*vx + vy*vy + vz*vz;
@@ -278,15 +260,6 @@ int grid::UpdateMHDPrim(float **dU, float c1, float c2)
 	  eint = max(eint, emin);
 	  BaryonField[GENum][igrid] = eint;
 	  BaryonField[TENum][igrid] = eint + 0.5*v2 + 0.5*B2/D_new;
-
-	            if (ProblemType == 251){
-		      //    BaryonField[DensNum][igrid] = 1;
-	    // BaryonField[GENum][igrid ] = 0;
-            BaryonField[Vel1Num][igrid] = 0;
-            BaryonField[Vel2Num][igrid] = 0;
-            BaryonField[Vel3Num][igrid] = 0;
-	    }
-
 	  if (BaryonField[GENum][igrid] < 0.0) {
 	    printf("UpdateMHDPrim: eint < 0, cs2=%"GSYM", eta*v2=%"GSYM", eint=%"GSYM", etot=%"GSYM", 0.5*v2=%"GSYM", p=%"GSYM", rho=%"GSYM",0.5*B2/rho=%"GSYM"\n", 
 		   cs*cs, DualEnergyFormalismEta1*v2, eint, etot, 0.5*v2, p, D_new, 0.5*B2/rho);

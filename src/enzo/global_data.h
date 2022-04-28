@@ -120,6 +120,10 @@ EXTERN float huge_number, tiny_number;
 
 EXTERN float Gamma;
 
+/* Flag to enable variable (non-uniform) gamma */
+
+EXTERN int VariableGamma;
+
 /* Flag indicating if the gas is pressureless. */
 
 EXTERN int PressureFree;
@@ -424,24 +428,16 @@ EXTERN int MultiMetals;
  * 1: On, (two fluid model)
  */
 EXTERN int CRModel;
-
 /* Cosmic Ray Diffusion
  * 0: Off - default
  * 1: On, CRkappa is constant across grid
- * 2: On, anisotropic diffusion with constant CRkappa
  */
 EXTERN int CRDiffusion;
-
 /* Cosmic Ray Feedback
  *    0.0 -- No CR feedback
  *    1.0 -- All feedback into CR field
  */
 EXTERN float CRFeedback;
-
-EXTERN int CRHeating; // 0 is off, 1 is on
-EXTERN int CRStreaming; // 0 is off, 1 is on 
-EXTERN float CRStreamVelocityFactor;
-EXTERN float CRStreamStabilityFactor;
 EXTERN float CRkappa;
 EXTERN float CRCourantSafetyNumber;
 EXTERN float CRdensFloor;
@@ -843,7 +839,6 @@ EXTERN int iS1;
 EXTERN int iS2;
 EXTERN int iS3;
 EXTERN int iEint;
-EXTERN int iCR;
 EXTERN float SmallRho;
 EXTERN float SmallP;
 EXTERN float SmallEint;
@@ -859,7 +854,11 @@ EXTERN int ConservativeReconstruction;
 EXTERN int EOSType;
 EXTERN float EOSSoundSpeed;
 EXTERN float EOSCriticalDensity;
+EXTERN float EOSCriticalDensity2;
+EXTERN float EOSCriticalDensity3;
 EXTERN float EOSGamma;
+EXTERN float EOSGamma2;
+EXTERN float EOSGamma3;
 EXTERN float C_h;
 EXTERN float C_p;
 EXTERN float DivBDampingLength;
@@ -959,6 +958,15 @@ EXTERN int MetalCooling;
 EXTERN char *MetalCoolingTable;
 EXTERN int CIECooling;
 EXTERN int H2OpticalDepthApproximation;
+#ifdef GRACKLE_MD
+EXTERN int UseDustDensityField;
+EXTERN int MetalChemistry;
+EXTERN int GrainGrowth;
+EXTERN int MetalAbundances;
+EXTERN int DustSpecies;
+EXTERN int DustTemperatureMulti;
+EXTERN int DustSublimation;
+#endif
 
 //   1 - Adaptive ray tracing transfer
 //   0 - none
@@ -1171,7 +1179,6 @@ class ActiveParticleType_info;
 EXTERN ActiveParticleType_info *EnabledActiveParticles[MAX_ACTIVE_PARTICLE_TYPES];
 EXTERN int EnabledActiveParticlesCount;
 EXTERN float ActiveParticleDensityThreshold;
-EXTERN int SmartStarAccretion;
 EXTERN int SmartStarFeedback;
 EXTERN int SmartStarEddingtonCap;
 EXTERN int SmartStarBHFeedback;
