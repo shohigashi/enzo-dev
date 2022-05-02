@@ -447,11 +447,8 @@ public:
 
 /* Member functions for dealing with Cosmic Ray Diffusion */
 
-  int ComputeAnisotropicCRDiffusion(); // Anisotropic CR Diffusion Method
-  int ComputeCRDiffusion();            // Isotropic CR Diffusion Method 
-  int ComputeCRDiffusionTimeStep(float &dt);
-  int ComputeCRStreaming();            // Anisotropic CR Streaming Method
-  int ComputeCRStreamingTimeStep(float &dt);
+   int ComputeCRDiffusion(); // CR Diffusion Method 
+   int ComputeCRDiffusionTimeStep(float &dt);
 
 /* Baryons: Copy current solution to Old solution (returns success/fail)
     (for step #16) */
@@ -1730,8 +1727,7 @@ int CommunicationTransferActiveParticles(grid* Grids[], int NumberOfGrids,
 			   int EndIndex, star_data* &List, 
 			   bool KeepLocal, bool ParticlesAreLocal,
 			   int CopyDirection,
-			   int IncludeGhostZones = FALSE,
-                           int CountOnly = FALSE);
+			   int IncludeGhostZones = FALSE);
 
 int TransferSubgridActiveParticles(grid* Subgrids[], int NumberOfSubgrids,
                      int* &NumberToMove, int StartIndex,
@@ -1868,6 +1864,7 @@ int zEulerSweep(int j, int NumberOfSubgrids, fluxes *SubgridFluxes[],
 		Elong_int GridGlobalStart[], float *CellWidthTemp[], 
 		int GravityOn, int NumberOfColours, int colnum[], float *pressure);
 
+
 // AccelerationHack
 
   int AccelerationHack;
@@ -1922,42 +1919,26 @@ int zEulerSweep(int j, int NumberOfSubgrids, fluxes *SubgridFluxes[],
 /* Cosmic Ray Shock Tube Problems: Initialize grid (returns SUCCESS or FAIL) */
 
   int CRShockTubesInitializeGrid(float InitialDiscontinuity,
-                                 float LeftDensity, float RightDensity,
-                                 float LeftVelocityX, float RightVelocityX,
-                                 float LeftVelocityY, float RightVelocityY,
-                                 float LeftVelocityZ, float RightVelocityZ,
-                                 float LeftPressure, float RightPressure,
-                                 float LeftCRDensity, float RightCRDensity,
-                                 float LeftBx, float RightBx,
-                                 float LeftBy, float RightBy,
-                                 float LeftBz, float RightBz);
+				 float LeftDensity, float RightDensity,
+				 float LeftVelocityX, float RightVelocityX,
+				 float LeftVelocityY, float RightVelocityY,
+				 float LeftVelocityZ, float RightVelocityZ,
+				 float LeftPressure, float RightPressure,
+				 float LeftCRDensity, float RightCRDensity);
   int CRShockTubesInitializeGrid(float InitialDiscontinuity,
-                                 float SecondDiscontinuity,
-                                 float LeftDensity, float RightDensity,
-                                 float CenterDensity,
-                                 float LeftVelocityX, float RightVelocityX,
-                                 float CenterVelocityX,
-                                 float LeftVelocityY, float RightVelocityY,
-                                 float CenterVelocityY,
-                                 float LeftVelocityZ, float RightVelocityZ,
-                                 float CenterVelocityZ,
-                                 float LeftPressure, float RightPressure,
-                                 float CenterPressure,
-                                 float LeftCRDensity, float RightCRDensity,
-                                 float CenterCRDensity,
-                                 float LeftBx, float RightBx,
-                                 float CenterBx,
-                                 float LeftBy, float RightBy,
-                                 float CenterBy,
-                                 float LeftBz, float RightBz,
-                                 float CenterBz);
-
-  int  CRTransportTestInitializeGrid(int test_type, float center,
-                                     float rho, float vx,
-                                     float vy,  float vz,
-                                     float pg,  float ecr,
-                                     float bx,  float by,
-                                     float bz);
+				 float SecondDiscontinuity,
+				 float LeftDensity, float RightDensity,
+				 float CenterDensity,
+				 float LeftVelocityX, float RightVelocityX,
+				 float CenterVelocityX,
+				 float LeftVelocityY, float RightVelocityY,
+				 float CenterVelocityY,
+				 float LeftVelocityZ, float RightVelocityZ,
+				 float CenterVelocityZ,
+				 float LeftPressure, float RightPressure,
+				 float CenterPressure,
+				 float LeftCRDensity, float RightCRDensity,
+				 float CenterCRDensity);
 
 /* Initialize for a uniform grid (returns SUCCESS or FAIL) */
 
@@ -2190,7 +2171,8 @@ int zEulerSweep(int j, int NumberOfSubgrids, fluxes *SubgridFluxes[],
 			     float CollapseTestInitialFractionHeIII, 
 			     float CollapseTestInitialFractionHM,
 			     float CollapseTestInitialFractionH2I, 
-			     float CollapseTestInitialFractionH2II);
+			     float CollapseTestInitialFractionH2II,
+           float CollapseTestSphereCloudPerturbation[MAX_SPHERES]);
 
 
 /* Cluster: initialize grid. */

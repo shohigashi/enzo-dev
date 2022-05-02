@@ -856,7 +856,7 @@ c                         from the SNe
 
 c                         Limit maximum velocity boost to 1000 km/s
 
-                          if ((pcell/mc) .gt. mv) then
+                          if ((p_sn/mc) .gt. mv) then
                              pcell = mc*mv
                           endif
 

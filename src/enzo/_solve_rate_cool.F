@@ -211,9 +211,6 @@
 #endif
 
 
-      real*8 mh
-      parameter (mh = mass_h)
-
 !  Locals
 
       INTG_PREC i, j, k, iter
@@ -341,12 +338,6 @@ c      chunit = (7.17775e-12_RKIND)/(2._RKIND*uvel*uvel*mass_h)   ! 4.5 eV per H
          enddo
 
 !        ------------------ Loop over subcycles ----------------
-! modified from here
-         if((j.eq.4).and.(k.eq.4)) then
-           write(*,'(A3,1E10.3)')
-     &       'IN', dt*tbase1
-         end if
-! modification end
 
          do iter = 1, itmax
 
@@ -969,8 +960,8 @@ c -------------------------------------------------------------------
 
 !     Parameters
 
-      real*8 everg,e24, e26
-      parameter(everg = ev2erg ,e24 = 13.6_RKIND, 
+      real*8 e24, e26
+      parameter(e24 = 13.6_RKIND, 
      &          e26 = 24.6_RKIND)
 
 !     locals

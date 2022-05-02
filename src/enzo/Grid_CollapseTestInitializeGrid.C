@@ -12,11 +12,6 @@
 /
 ************************************************************************/
 
-#ifdef GRACKLE_MD
-extern "C" {
-#include <grackle.h>
-}
-#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -29,7 +24,6 @@ extern "C" {
 #include "ExternalBoundary.h"
 #include "Grid.h"
 #include "CosmologyParameters.h"
-#include "phys_constants.h"
 #include "hydro_rk/EOS.h"
 
 #define NTHETA 1000
@@ -42,6 +36,7 @@ int GetUnits(float *DensityUnits, float *LengthUnits,
 	     float *VelocityUnits, FLOAT Time);
 int CosmologyComputeExpansionFactor(FLOAT time, FLOAT *a, FLOAT *dadt);
 float gasdev();
+int FindField(int field, int farray[], int numfields);
 
 // Used to compute Bonner-Ebert density profile
 double BE(double r);
@@ -106,48 +101,15 @@ int grid::CollapseTestInitializeGrid(int NumberOfSpheres,
 				     float CollapseTestInitialFractionHeIII, 
 				     float CollapseTestInitialFractionHM,
 				     float CollapseTestInitialFractionH2I, 
-				     float CollapseTestInitialFractionH2II)
+				     float CollapseTestInitialFractionH2II,
+             float CloudPerturbation[MAX_SPHERES])
 {
   /* declarations */
 
   int dim, i, j, k, m, sphere;
-  int DeNum, HINum, HIINum, HeINum, HeIINum, HeIIINum, HMNum, H2INum, H2IINum,
-    DINum, DIINum, HDINum, MetalNum, ColourNum;
+  int Vel1Num,Vel2Num,Vel3Num,DeNum, HINum, HIINum, HeINum, HeIINum, HeIIINum, HMNum, H2INum, H2IINum,
+    DINum, DIINum, HDINum, MetalNum;
   float xdist,ydist,zdist;
-#ifdef GRACKLE_MD
-  int HeHIINum, DMNum, HDIINum
-    , CINum,  CIINum,   CONum,      CO2Num,    OINum,   OHNum
-    , H2ONum, O2Num,    SiINum,     SiOINum,   SiO2INum
-    , CHNum,  CH2Num,   COIINum,    OIINum,    OHIINum, H2OIINum, H3OIINum, O2IINum
-    , MgNum,  AlNum,    SNum,       FeNum
-    , SiMNum, FeMNum,   Mg2SiO4Num, MgSiO3Num, Fe3O4Num
-    , ACNum,  SiO2DNum, MgONum,     FeSNum,    Al2O3Num
-    , DustNum;
-  double C_frac, O_frac, Mg_frac, Al_frac, Si_frac, S_frac, Fe_frac;
-  double SiM_frac  , FeM_frac  , Mg2SiO4_frac, MgSiO3_frac, Fe3O4_frac
-   , AC_frac   , SiO2D_frac, MgO_frac    , FeS_frac   , Al2O3_frac;
-
-  if (grackle_data->use_grackle) {
-      /* include metal/dust abundances of C30 */
-       C_frac = grackle_data->SN0_fC [4];
-       O_frac = grackle_data->SN0_fO [4];
-      Mg_frac = grackle_data->SN0_fMg[4];
-      Al_frac = grackle_data->SN0_fAl[4];
-      Si_frac = grackle_data->SN0_fSi[4];
-       S_frac = grackle_data->SN0_fS [4];
-      Fe_frac = grackle_data->SN0_fFe[4];
-          SiM_frac = grackle_data->SN0_fSiM    [4];
-          FeM_frac = grackle_data->SN0_fFeM    [4];
-      Mg2SiO4_frac = grackle_data->SN0_fMg2SiO4[4];
-       MgSiO3_frac = grackle_data->SN0_fMgSiO3 [4];
-        Fe3O4_frac = grackle_data->SN0_fFe3O4  [4];
-           AC_frac = grackle_data->SN0_fAC     [4];
-        SiO2D_frac = grackle_data->SN0_fSiO2D  [4];
-          MgO_frac = grackle_data->SN0_fMgO    [4];
-          FeS_frac = grackle_data->SN0_fFeS    [4];
-        Al2O3_frac = grackle_data->SN0_fAl2O3  [4];
-  }
-#endif
 
   /* create fields */
 
@@ -162,7 +124,7 @@ int grid::CollapseTestInitializeGrid(int NumberOfSpheres,
     FieldType[NumberOfBaryonFields++] = Velocity2;
   if (GridRank > 2)
     FieldType[NumberOfBaryonFields++] = Velocity3;
-    if (WritePotential)
+  if (WritePotential)
       FieldType[NumberOfBaryonFields++] = GravPotential;
   if (MultiSpecies) {
     FieldType[DeNum    = NumberOfBaryonFields++] = ElectronDensity;
@@ -181,69 +143,13 @@ int grid::CollapseTestInitializeGrid(int NumberOfSpheres,
       FieldType[DIINum  = NumberOfBaryonFields++] = DIIDensity;
       FieldType[HDINum  = NumberOfBaryonFields++] = HDIDensity;
     }
-#ifdef GRACKLE_MD
-    if (MultiSpecies > 3) {
-      FieldType[   HeHIINum = NumberOfBaryonFields++] =   HeHIIDensity;
-      FieldType[      DMNum = NumberOfBaryonFields++] =      DMDensity;
-      FieldType[    HDIINum = NumberOfBaryonFields++] =    HDIIDensity;
-    }
-    if (MetalChemistry > 0) {
-      FieldType[      CINum = NumberOfBaryonFields++] =      CIDensity;
-      FieldType[     CIINum = NumberOfBaryonFields++] =     CIIDensity;
-      FieldType[      CONum = NumberOfBaryonFields++] =     COIDensity;
-      FieldType[     CO2Num = NumberOfBaryonFields++] =    CO2IDensity;
-      FieldType[      OINum = NumberOfBaryonFields++] =      OIDensity;
-      FieldType[      OHNum = NumberOfBaryonFields++] =     OHIDensity;
-      FieldType[     H2ONum = NumberOfBaryonFields++] =    H2OIDensity;
-      FieldType[      O2Num = NumberOfBaryonFields++] =     O2IDensity;
-      FieldType[     SiINum = NumberOfBaryonFields++] =     SiIDensity;
-      FieldType[    SiOINum = NumberOfBaryonFields++] =    SiOIDensity;
-      FieldType[   SiO2INum = NumberOfBaryonFields++] =   SiO2IDensity;
-      FieldType[      CHNum = NumberOfBaryonFields++] =     CHIDensity;
-      FieldType[     CH2Num = NumberOfBaryonFields++] =    CH2IDensity;
-      FieldType[    COIINum = NumberOfBaryonFields++] =    COIIDensity;
-      FieldType[     OIINum = NumberOfBaryonFields++] =     OIIDensity;
-      FieldType[    OHIINum = NumberOfBaryonFields++] =    OHIIDensity;
-      FieldType[   H2OIINum = NumberOfBaryonFields++] =   H2OIIDensity;
-      FieldType[   H3OIINum = NumberOfBaryonFields++] =   H3OIIDensity;
-      FieldType[    O2IINum = NumberOfBaryonFields++] =    O2IIDensity;
-      if (GrainGrowth || DustSublimation) {
-        if (DustSpecies > 0) {
-          FieldType[      MgNum = NumberOfBaryonFields++] =      MgDensity;
-        }
-        if (DustSpecies > 1) {
-          FieldType[      AlNum = NumberOfBaryonFields++] =      AlDensity;
-          FieldType[       SNum = NumberOfBaryonFields++] =       SDensity;
-          FieldType[      FeNum = NumberOfBaryonFields++] =      FeDensity;
-        }
-      }
-    }
-    if (GrainGrowth || DustSublimation) {
-      if (DustSpecies > 0) {
-        FieldType[  MgSiO3Num = NumberOfBaryonFields++] =  MgSiO3Density;
-        FieldType[      ACNum = NumberOfBaryonFields++] =      ACDensity;
-      }
-      if (DustSpecies > 1) {
-        FieldType[     SiMNum = NumberOfBaryonFields++] =     SiMDensity;
-        FieldType[     FeMNum = NumberOfBaryonFields++] =     FeMDensity;
-        FieldType[ Mg2SiO4Num = NumberOfBaryonFields++] = Mg2SiO4Density;
-        FieldType[   Fe3O4Num = NumberOfBaryonFields++] =   Fe3O4Density;
-        FieldType[   SiO2DNum = NumberOfBaryonFields++] =   SiO2DDensity;
-        FieldType[     MgONum = NumberOfBaryonFields++] =     MgODensity;
-        FieldType[     FeSNum = NumberOfBaryonFields++] =     FeSDensity;
-        FieldType[   Al2O3Num = NumberOfBaryonFields++] =   Al2O3Density;
-      }
-    }
-#endif
   }
   if (SphereUseMetals)
     FieldType[MetalNum = NumberOfBaryonFields++] = SNColour;
 
+  int ColourNum = NumberOfBaryonFields;
   if (SphereUseColour)
-    FieldType[ColourNum = NumberOfBaryonFields++] = Metallicity; /* fake it with metals */
-
-  if (UseDustDensityField)
-    FieldType[DustNum = NumberOfBaryonFields++] = DustDensity;
+    FieldType[NumberOfBaryonFields++] = Metallicity; /* fake it with metals */
 
   /* Return if this doesn't concern us. */
 
@@ -256,20 +162,25 @@ int grid::CollapseTestInitializeGrid(int NumberOfSpheres,
 
   /* Set various units. */
 
+  const double Mpc = 3.0856e24, SolarMass = 1.989e33, GravConst = 6.67e-8,
+    pi = 3.14159, mh = 1.67e-24, kboltz = 1.381e-16, LightSpeed = 2.9979e10;
   float DensityUnits, LengthUnits, TemperatureUnits, TimeUnits, 
-    VelocityUnits, CriticalDensity = 1, BoxLength = 1, mu=1.22;//mu = 0.6;
+    VelocityUnits, CriticalDensity = 1, BoxLength = 1 ,mu=1.22;//, mu = 0.6;
+    
     mu = 1.22;
+
   FLOAT a, dadt, ExpansionFactor = 1;
   GetUnits(&DensityUnits, &LengthUnits, &TemperatureUnits, &TimeUnits, 
 	   &VelocityUnits, Time);
   if (ComovingCoordinates) {
     CosmologyComputeExpansionFactor(Time, &a, &dadt);
     ExpansionFactor = a/(1.0+InitialRedshift);
-    CriticalDensity = 2.78e11*POW(HubbleConstantNow, 2); // in Msolar/Mpc^3
+    CriticalDensity = 2.78e11*pow(HubbleConstantNow, 2); // in Msolar/Mpc^3
     BoxLength = ComovingBoxSize*ExpansionFactor/HubbleConstantNow;  // in Mpc
+    //BoxLength = 3.086e+18*ExpansionFactor/HubbleConstantNow;  // in Mpc
   } else {
-    CriticalDensity = 2.78e11*POW(0.74,2); // in Msolar/Mpc^3 for h=0.74
-    BoxLength = LengthUnits / Mpc_cm;
+    CriticalDensity = 2.78e11*pow(0.74,2); // in Msolar/Mpc^3 for h=0.74
+    BoxLength = LengthUnits / 3.086e24;
     HubbleConstantNow = 1.0;
     OmegaMatterNow = 1.0;
   }
@@ -290,20 +201,20 @@ int grid::CollapseTestInitializeGrid(int NumberOfSpheres,
   NFWPressure[0] = 1.0 * kboltz * InitialTemperature / (mu * mh);
   FILE *fptr = fopen("NFWProfile.out", "w");
   for (i = 0; i < NFW_POINTS; i++) {
-    NFWRadius[i] = SphereRadius[sphere]*POW(10, -3*(float(i)/NFW_POINTS));
+    NFWRadius[i] = SphereRadius[sphere]*pow(10, -3*(float(i)/NFW_POINTS));
     x1 = NFWRadius[i]/SphereCoreRadius[sphere];
     NFWDensity[i] = SphereDensity[sphere]/(x1*(1.0+x1)*(1.0+x1));
     NFWMass[i] = 4.0*pi*SphereDensity[sphere]*
-      (CriticalDensity/POW(ExpansionFactor, 3)) *
-      POW(SphereCoreRadius[sphere]*BoxLength, 3) *
+      (CriticalDensity/pow(ExpansionFactor, 3)) *
+      pow(SphereCoreRadius[sphere]*BoxLength, 3) *
       (log(1.0+x1) - x1/(x1+1.0));  // in Msolar
     dpdr_old = dpdr;
     dpdr = GravConst * NFWMass[i] * SolarMass * 
       NFWDensity[i] / 
-      POW(NFWRadius[i]*BoxLength*Mpc_cm, 2);
+      pow(NFWRadius[i]*BoxLength*Mpc, 2);
     if (i > 0)
       NFWPressure[i] = NFWPressure[i-1] -
-	0.5*(dpdr+dpdr_old)*(NFWRadius[i]-NFWRadius[i-1])*BoxLength*Mpc_cm;
+	0.5*(dpdr+dpdr_old)*(NFWRadius[i]-NFWRadius[i-1])*BoxLength*Mpc;
     NFWTemp[i] = NFWPressure[i]*mu*mh/(kboltz*NFWDensity[i]); // in K
     NFWSigma[i] = sqrt(kboltz * NFWTemp[i] / (mu * mh));  // in cm/s
     float mean_overdensity = 3.0*SphereDensity[sphere] / (x1*x1*x1) *
@@ -402,6 +313,8 @@ int grid::CollapseTestInitializeGrid(int NumberOfSpheres,
     float HII_Fraction, HeII_Fraction, HeIII_Fraction, H2I_Fraction;
 
     /* Pre-compute cloud properties before looping over mesh */
+
+      
       /*added by Sho Higashi 2019/04/30
        *Set up the turbulence field
        *by reading parameter 'turbulence.in'
@@ -416,7 +329,7 @@ int grid::CollapseTestInitializeGrid(int NumberOfSpheres,
    float*** turbulence_field_vx;
    float*** turbulence_field_vy;
    float*** turbulence_field_vz;
-   if (SphereTurbulence[sphere] > 0) { // Now this is valid only for one cloud. by Sho Higashi
+   if (SphereTurbulence[sphere] > 0) { // Now this is valid only for one cloud. by SH
       FILE* inf;
       inf = fopen("turbulence.in", "r");
 
@@ -517,6 +430,7 @@ int grid::CollapseTestInitializeGrid(int NumberOfSpheres,
       // Normalize the turbulent field so that the RMS velocity
       // is some fraction of the halo sound speed.
       float ssum = 0.0;
+
       if(EOSType > 0){
         switch(EOSType){
             case 1:
@@ -552,7 +466,7 @@ int grid::CollapseTestInitializeGrid(int NumberOfSpheres,
 				          (mu * mh)) / VelocityUnits;
                 break;
             case 9:
-                VelocitySound[sphere] = sqrt((SphereTemperature[sphere] * 1.0 * kboltz) / 
+                VelocitySound[sphere] = sqrt((SphereTemperature[sphere] * EOSGamma * kboltz) / 
 				          (mu * mh)) / VelocityUnits;
                 break;
         }
@@ -594,7 +508,7 @@ int grid::CollapseTestInitializeGrid(int NumberOfSpheres,
 
       printf("Finished reading in turbulence.\n");
       } // End if SphereUseTurbulence
-
+    
     for (sphere = 0; sphere < NumberOfSpheres; sphere++) {
       Scale_Factor[sphere] = SphereCutOff[sphere] / SphereRadius[sphere];
       sin_deltaDisk[sphere] = sin(pi * SphereCutOff[sphere] / 180.0);
@@ -607,7 +521,7 @@ int grid::CollapseTestInitializeGrid(int NumberOfSpheres,
       switch (SphereType[sphere]) {
 
       case 1:
-	SphereMass = (4*pi/3.0)*POW((SphereRadius[sphere]*LengthUnits), 3) *
+	SphereMass = (4*pi/3)*pow((SphereRadius[sphere]*LengthUnits), 3) *
 	  (SphereDensity[sphere]*DensityUnits);
 	printf("mass = %"GSYM", lunit = %"GSYM", dunit = %"GSYM", rho = %"GSYM", r = %"GSYM"\n",
 	       SphereMass, LengthUnits, DensityUnits, SphereDensity[sphere],
@@ -621,32 +535,35 @@ int grid::CollapseTestInitializeGrid(int NumberOfSpheres,
       case 4:
 	// Integral of a Gaussian
 	term1 = 0.25 * sqrt(pi) * 0.3536 *  // 2^(-3/2) = 0.3536
-	  POW((SphereCoreRadius[sphere]), 3) *
+	  pow((SphereCoreRadius[sphere]), 3) *
 	  ERF(SphereRadius[sphere]/SphereCoreRadius[sphere]);
 	term2 = 0.25 * SphereRadius[sphere] *
-	  POW(SphereCoreRadius[sphere], 2) *
-	  PEXP(-0.5 * POW((SphereRadius[sphere]/SphereCoreRadius[sphere]), 2));
+	  pow(SphereCoreRadius[sphere], 2) *
+	  PEXP(-0.5 * pow((SphereRadius[sphere]/SphereCoreRadius[sphere]), 2));
 	SphereMass = (4*pi*SphereDensity[sphere]*DensityUnits) * 
-	  POW(LengthUnits, 3) * (term1 - term2);
+	  pow(LengthUnits, 3) * (term1 - term2);
 	break;
 
       case 5:
 	SphereCoreDens = (SphereDensity[sphere]*DensityUnits) * 
-	  POW(SphereCoreRadius[sphere] / SphereRadius[sphere], -2);
-	SphereCoreMass = (4*pi/3.0) * 
-	  POW((SphereCoreRadius[sphere]*LengthUnits),3) * (SphereCoreDens);
+	  pow(SphereCoreRadius[sphere] / SphereRadius[sphere], -2);
+	SphereCoreMass = (4*pi/3) * 
+	  pow((SphereCoreRadius[sphere]*LengthUnits),3) * (SphereCoreDens);
 	SphereMass = (4*pi*SphereDensity[sphere]*DensityUnits * 
-		      POW(SphereRadius[sphere]*LengthUnits, 2) *
+		      pow(SphereRadius[sphere]*LengthUnits, 2) *
 		      ((SphereRadius[sphere] - SphereCoreRadius[sphere]) * 
 		       LengthUnits)) + SphereCoreMass;
 	break;
 
       case 6:
-	SphereMass = POW(VelocitySound[sphere],3) / 
-	  (sqrt(4*pi*POW((GravConst)/(4*pi),3) * 
+
+      VelocitySound[sphere] = sqrt((SphereTemperature[sphere] * Gamma * kboltz) / 
+				   (mu * mh)) / VelocityUnits;
+	SphereMass = pow(VelocitySound[sphere],3) / 
+	  (sqrt(4*pi*pow((GravConst)/(4*pi),3) * 
 		(SphereDensity[sphere]))) * 
 	  q(SphereCutOff[sphere]);
-	SphereMass = SphereMass*DensityUnits*POW(LengthUnits,3);
+	SphereMass = SphereMass*DensityUnits*pow(LengthUnits,3);
 	break;
 
       case 7:
@@ -665,7 +582,7 @@ int grid::CollapseTestInitializeGrid(int NumberOfSpheres,
 	break;
 
       case 8:
-	SphereMass = (4*pi/3.0)*POW((SphereRadius[sphere]*LengthUnits), 3) *
+	SphereMass = (4*pi/3)*pow((SphereRadius[sphere]*LengthUnits), 3) *
 	  (SphereDensity[sphere]*DensityUnits);
 	ComputeRadialVelocity(SphereDensity[sphere], SphereMass, 
 			      SphereRadius[sphere], VelocityUnits,
@@ -691,15 +608,15 @@ int grid::CollapseTestInitializeGrid(int NumberOfSpheres,
 
 	BHMass = SphereMass / SolarMass;  // in solar masses
 	SchwarzschildRadius = 2.0 * GravConst * SphereMass / 
-	  (clight*clight);
-	CavityRadius = 117.0 * SchwarzschildRadius * POW((BHMass/1e6), 0.08);
-	InnerDensity = 4.31e-10 * POW((BHMass/1e8), -0.8) *
-	  POW((CavityRadius/SchwarzschildRadius/1e3), -0.6) / DensityUnits;
-	InnerTemperature = 1.7e6 * POW((BHMass/1e6), -0.28);
-	InnerScaleHeight = 0.46 * CavityRadius * POW(BHMass/1e6, -0.12) / 
+	  (LightSpeed*LightSpeed);
+	CavityRadius = 117.0 * SchwarzschildRadius * pow((BHMass/1e6), 0.08);
+	InnerDensity = 4.31e-10 * pow((BHMass/1e8), -0.8) *
+	  pow((CavityRadius/SchwarzschildRadius/1e3), -0.6) / DensityUnits;
+	InnerTemperature = 1.7e6 * pow((BHMass/1e6), -0.28);
+	InnerScaleHeight = 0.46 * CavityRadius * pow(BHMass/1e6, -0.12) / 
 	  LengthUnits;
 	ThickenTransitionRadius = 1.9e3 * SchwarzschildRadius * 
-	  POW((BHMass/1e6), 2.0/21) / LengthUnits;
+	  pow((BHMass/1e6), 2.0/21) / LengthUnits;
 	CavityRadius /= LengthUnits;
 	printf("cgs: %"GSYM" %"GSYM" %"GSYM" %"GSYM" %"GSYM" %"GSYM"\n", SchwarzschildRadius, 
 	       CavityRadius*LengthUnits, InnerDensity*DensityUnits, 
@@ -728,27 +645,19 @@ int grid::CollapseTestInitializeGrid(int NumberOfSpheres,
 	     * TimeUnits);
 
       // Calculate speed of sound for this sphere
-      //VelocitySound[sphere] = sqrt((SphereTemperature[sphere] * Gamma * kboltz) / 
-//				   (mu * mh)) / VelocityUnits;
- //     printf("\nVelocitySound (cm s^-1): %"GSYM"\n", VelocitySound[sphere] * 
-//	     VelocityUnits);
-      if(EOSType > 0){
-            :
-                VelocitySound[sphere] = sqrt((SphereTemperature[sphere] * EOSGamma * kboltz) / 
-				          (mu * mh)) / VelocityUnits;
-    }else{
-                VelocitySound[sphere] = sqrt((SphereTemperature[sphere] * Gamma * kboltz) / 
-				          (mu * mh)) / VelocityUnits;
-    } //sound velocity defined
+      VelocitySound[sphere] = sqrt((SphereTemperature[sphere] * Gamma * kboltz) / 
+				   (mu * mh)) / VelocityUnits;
       printf("\nVelocitySound (cm s^-1): %"GSYM"\n", VelocitySound[sphere] * 
 	     VelocityUnits);
 
     } // ENDFOR sphere
 
+       
+int cell_index;
     for (k = 0; k < GridDimension[2]; k++)
       for (j = 0; j < GridDimension[1]; j++)
 	for (i = 0; i < GridDimension[0]; i++, n++) {
-
+      cell_index = k*(GridDimension[1]*GridDimension[0])+j*GridDimension[0]+i;
 	  /* Compute position */
 
 	  x = CellLeftEdge[0][i] + 0.5*CellWidth[0][i];
@@ -759,6 +668,11 @@ int grid::CollapseTestInitializeGrid(int NumberOfSpheres,
 
 	  /* Loop over spheres. */
 
+	  for (dim = 0; dim < MAX_DIMENSION; dim++) {
+      Velocity[dim] = 0;
+      
+	    DMVelocity[dim] = 0;
+	  }
 	  density = InitialDensity;
 	  temperature = temp1 = InitialTemperature;
 	  sigma = sigma1 = 0;
@@ -770,10 +684,8 @@ int grid::CollapseTestInitializeGrid(int NumberOfSpheres,
 	  HeII_Fraction = CollapseTestInitialFractionHeII;
 	  HeIII_Fraction = CollapseTestInitialFractionHeIII;
 	  H2I_Fraction = CollapseTestInitialFractionH2I;
-	  for (dim = 0; dim < MAX_DIMENSION; dim++) {
-	    Velocity[dim] = 0;
-	    DMVelocity[dim] = 0;
-	  }
+            // Add turbulence
+            
          if(turbulence_field_vx != NULL){
        
                int pert_index[3];
@@ -805,7 +717,7 @@ int grid::CollapseTestInitializeGrid(int NumberOfSpheres,
                Velocity[1] += turbulence_field_vy[pert_index[2]][pert_index[1]][pert_index[0]];
                Velocity[2] += turbulence_field_vz[pert_index[2]][pert_index[1]][pert_index[0]];
   }
-
+      
 	  for (sphere = 0; sphere < NumberOfSpheres; sphere++) {
 
 	    /* Find distance from center. */
@@ -839,15 +751,21 @@ int grid::CollapseTestInitializeGrid(int NumberOfSpheres,
 		else if (xpos > 0 && ypos < 0)
 		  theta = 2*pi + atan(ypos/xpos);
 	      } else if (xpos == 0 && ypos > 0)
-		theta = pi / 2.0;
+		theta = 3.14159 / 2.0;
 	      else if (xpos == 0 && ypos < 0)
-		theta = (3*pi) / 2.0;
+		theta = (3*3.14159) / 2.0;
 	      else
 		theta = 0.0;
 
 	      // Find out which shell the cell is in
 	      a = Ang(SphereAng1[sphere],SphereAng2[sphere],SphereRadius[sphere],r);
+      
+      
+       
 
+       
+       
+       
 	      /* Start with solid body rotation and then add in a
 		 velocity of a fraction of sound speed in a random
 		 direction to create turbulence */
@@ -860,15 +778,18 @@ int grid::CollapseTestInitializeGrid(int NumberOfSpheres,
 		RotVelocity[2] = 2*pi*(xpos*sin(a)) / 
 		  SphereRotationalPeriod[sphere];
 		if (SphereType[sphere] == 7 || SphereType[sphere] == 9)
-		  GasRotVelocityCorrection = POW(rcyl/SphereRadius[sphere],-1.5);
+		  GasRotVelocityCorrection = pow(rcyl/SphereRadius[sphere],-1.5);
 		for (dim = 0; dim < MAX_DIMENSION; dim++) {
-		  Velocity[dim] = GasRotVelocityCorrection * RotVelocity[dim];
-		  DMVelocity[dim] = DMRotVelocityCorrection * RotVelocity[dim];
-		}
-	      } else {
+		  Velocity[dim] = GasRotVelocityCorrection * RotVelocity[dim];	
+ 	  DMVelocity[dim] = DMRotVelocityCorrection * RotVelocity[dim];
+    }
+		}else{
 		RotVelocity[0] = RotVelocity[1] = RotVelocity[2] = 0;
 	      }
-	     /* 
+    
+
+
+/*
 	      Velocity[0] += SphereTurbulence[sphere] * 
 		Maxwellian(VelocitySound[sphere], VelocityUnits, mu, Gamma);
 	      Velocity[1] += SphereTurbulence[sphere] * 
@@ -898,10 +819,10 @@ int grid::CollapseTestInitializeGrid(int NumberOfSpheres,
 	      if (SphereType[sphere] == 1)
 		dens1 = SphereDensity[sphere];
 
-	      /* 2) r^-2 POWer law */
+	      /* 2) r^-2 power law */
 
 	      if (SphereType[sphere] == 2)
-		dens1 = SphereDensity[sphere]*POW(r/SphereRadius[sphere], -2);
+		dens1 = SphereDensity[sphere]*pow(r/SphereRadius[sphere], -2);
 
 	      /* 3) NFW profile (use look-up table for temperature and
 		 velocity dispersion)*/
@@ -923,17 +844,17 @@ int grid::CollapseTestInitializeGrid(int NumberOfSpheres,
 
 	      if (SphereType[sphere] == 4) {
 		dens1 = SphereDensity[sphere]*
-		  PEXP(-0.5*POW(r/SphereCoreRadius[sphere], 2));
+		  PEXP(-0.5*pow(r/SphereCoreRadius[sphere], 2));
 	      }
 
-	      /* 5) r^-2 POWer law with core radius */
+	      /* 5) r^-2 power law with core radius */
 
 	      if (SphereType[sphere] == 5) {
 		if (r < SphereCoreRadius[sphere]) {
-		  dens1 = SphereDensity[sphere]*POW(SphereCoreRadius[sphere]/
+		  dens1 = SphereDensity[sphere]*pow(SphereCoreRadius[sphere]/
 						    SphereRadius[sphere], -2);
 		} else {
-		  dens1 = SphereDensity[sphere]*POW(r/SphereRadius[sphere], -2);
+		  dens1 = SphereDensity[sphere]*pow(r/SphereRadius[sphere], -2);
 		}
 	      }
 
@@ -941,6 +862,8 @@ int grid::CollapseTestInitializeGrid(int NumberOfSpheres,
 
 	      if (SphereType[sphere] == 6) {
 		dens1 = SphereDensity[sphere] * BE(r*Scale_Factor[sphere]);
+    dens1 +=  SphereDensity[sphere] * CloudPerturbation[sphere] * (1.0 - 2.0*pow(ypos/r, 2));
+    //temperature = SphereTemperature[sphere];
 	      }
 
 	      /* 7) Uniform density, Keplerian disk */
@@ -970,14 +893,14 @@ int grid::CollapseTestInitializeGrid(int NumberOfSpheres,
 	      /* 9) Circumbinary BH accretion disk (Lippai et al. 2008) */
 
 	      if (SphereType[sphere] == 9) {
-		MidplaneDensity = InnerDensity * POW(rcyl/CavityRadius, -0.6);
+		MidplaneDensity = InnerDensity * pow(rcyl/CavityRadius, -0.6);
 		MidplaneTemperature = 
-		  InnerTemperature * POW(rcyl/CavityRadius, -0.9);
+		  InnerTemperature * pow(rcyl/CavityRadius, -0.9);
 		if (rcyl < ThickenTransitionRadius)
 		  ScaleHeight = InnerScaleHeight;
 		else
 		  ScaleHeight = InnerScaleHeight * 
-		    POW(rcyl/ThickenTransitionRadius, 1.05);
+		    pow(rcyl/ThickenTransitionRadius, 1.05);
 		ScaleHeight = max(ScaleHeight, 2*CellWidth[0][0]);
 
 //		printf("r=%"FSYM", z=%"FSYM", h=%"GSYM", rho=%"GSYM", T=%"GSYM"\n", 
@@ -1040,7 +963,7 @@ int grid::CollapseTestInitializeGrid(int NumberOfSpheres,
 
 		  if (dim == 0)
 		    dens1 = SphereDensity[sphere]*PEXP(-drad/ScaleHeightR)/
-		      POW(cosh(zheight/max(ScaleHeightz, CellWidth[0][0])), 2);
+		      pow(cosh(zheight/max(ScaleHeightz, CellWidth[0][0])), 2);
 
 		  //		if (dens1 < density)
 		  //		  break;
@@ -1055,11 +978,11 @@ int grid::CollapseTestInitializeGrid(int NumberOfSpheres,
 		  float accel = PointSourceGravityConstant;
 		  if (PointSourceGravity == 1)
 		    accel = PointSourceGravityConstant/
-		      (POW(drad,3) + POW(PointSourceGravityCoreRadius, 3));
+		      (pow(drad,3) + pow(PointSourceGravityCoreRadius, 3));
 		  if (PointSourceGravity == 2) {
 		    x1 = drad/PointSourceGravityCoreRadius;
 		    accel = PointSourceGravityConstant*(log(1+x1)-x1/(1+x1))/
-		      POW(drad, 3);
+		      pow(drad, 3);
 		  }
 		
 		  float vel = sqrt(accel);
@@ -1080,13 +1003,13 @@ int grid::CollapseTestInitializeGrid(int NumberOfSpheres,
 
 	      } // end: disk
 
-               /* 11) stellar wind, with r^-2 POWer law density*/
+               /* 11) stellar wind, with r^-2 power law density*/
               if (SphereType[sphere] == 11) {
-                radial_velocity = StellarWindSpeed/VelocityUnits;
-                dens1 = StellarWindDensity*POW(r/StellarWindRadius, -2);
-                Velocity[0] += radial_velocity * xpos / r;
-                Velocity[1] += radial_velocity * ypos / r;
-                Velocity[2] += radial_velocity * zpos / r;
+                //radial_velocity = StellarWindSpeed/VelocityUnits;
+                //dens1 = StellarWindDensity*pow(r/StellarWindRadius, -2);
+                //Velocity[0] += radial_velocity * xpos / r;
+                //Velocity[1] += radial_velocity * ypos / r;
+                //Velocity[2] += radial_velocity * zpos / r;
               } // end stellar wind
 	    
 	      /* If the density is larger than the background (or the previous
@@ -1109,7 +1032,7 @@ int grid::CollapseTestInitializeGrid(int NumberOfSpheres,
 		//		temperature = (1-weight)*temperature + weight*temp1;
 		//	      temp1 = InitialTemperature;
 
-		if (SphereType[sphere] != 7 && SphereType[sphere] != 9) {
+		if (SphereType[sphere] != 7 && SphereType[sphere] != 9 ){
 		  if (temp1 == InitialTemperature) {
 		    if (SphereConstantPressure[sphere] == TRUE) {
 		      temperature = SphereTemperature[sphere] * (SphereDensity[sphere] / dens1);
@@ -1234,13 +1157,13 @@ int grid::CollapseTestInitializeGrid(int NumberOfSpheres,
 
 	    if (MultiSpecies > 1) {
 	      BaryonField[HMNum][n] = CollapseTestInitialFractionHM *
-		BaryonField[HIINum][n]* POW(temperature,float(0.88));
+		BaryonField[HIINum][n]* pow(temperature,float(0.88));
 	      BaryonField[H2IINum][n] = CollapseTestInitialFractionH2II *
-		2.0*BaryonField[HIINum][n]* POW(temperature,float(1.8));
+		2.0*BaryonField[HIINum][n]* pow(temperature,float(1.8));
 	      if (ComovingCoordinates)
 		BaryonField[H2INum][n] = H2I_Fraction *
-		  BaryonField[0][n]*CoolData.HydrogenFractionByMass*POW(301.0,5.1)*
-		  POW(OmegaMatterNow, float(1.5))/
+		  BaryonField[0][n]*CoolData.HydrogenFractionByMass*pow(301.0,5.1)*
+		  pow(OmegaMatterNow, float(1.5))/
 		  (OmegaMatterNow*BaryonMeanDensity)/
 		  //	      CosmologySimulationOmegaBaryonNow/
 		  HubbleConstantNow*2.0;
@@ -1273,15 +1196,6 @@ int grid::CollapseTestInitializeGrid(int NumberOfSpheres,
 	      BaryonField[HDINum][n] = CoolData.DeuteriumToHydrogenRatio*
 		BaryonField[H2INum][n];
 	    }
-#ifdef GRACKLE_MD
-           if(MultiSpecies > 3){
-             BaryonField[DMNum][n] = 1.0e-20 * BaryonField[0][n];
-             BaryonField[HDIINum][n] = 1.0e-20 * BaryonField[0][n];
-             BaryonField[HeHIINum][n] = 1.0e-20 * BaryonField[0][n];
-             BaryonField[DeNum][n] += 0.2*BaryonField[HeHIINum][n] 
-                                    - 0.5*BaryonField[DMNum][n] + BaryonField[HDIINum][n]/3.0;
-            }
-#endif 
 	  }
 
 	  /* If there are metals, set it. */
@@ -1290,107 +1204,33 @@ int grid::CollapseTestInitializeGrid(int NumberOfSpheres,
 	    BaryonField[MetalNum][n] = metallicity * CoolData.SolarMetalFractionByMass * 
 	      BaryonField[0][n];
 
-#ifdef GRACKLE_MD
-          if (MultiSpecies) {
-            if(MetalChemistry > 0) {
-              BaryonField[   CINum][n] = 1.0e-20 * BaryonField[MetalNum][n];
-              BaryonField[  CIINum][n] =  C_frac * BaryonField[MetalNum][n];
-              BaryonField[   CONum][n] = 1.0e-20 * BaryonField[MetalNum][n];
-              BaryonField[  CO2Num][n] = 1.0e-20 * BaryonField[MetalNum][n];
-              BaryonField[   OINum][n] =  O_frac * BaryonField[MetalNum][n];
-              BaryonField[   OHNum][n] = 1.0e-20 * BaryonField[MetalNum][n];
-              BaryonField[  H2ONum][n] = 1.0e-20 * BaryonField[MetalNum][n];
-              BaryonField[   O2Num][n] = 1.0e-20 * BaryonField[MetalNum][n];
-              BaryonField[  SiINum][n] = Si_frac * BaryonField[MetalNum][n];
-              BaryonField[ SiOINum][n] = 1.0e-20 * BaryonField[MetalNum][n];
-              BaryonField[SiO2INum][n] = 1.0e-20 * BaryonField[MetalNum][n];
-              BaryonField[   CHNum][n] = 1.0e-20 * BaryonField[MetalNum][n];
-              BaryonField[  CH2Num][n] = 1.0e-20 * BaryonField[MetalNum][n];
-              BaryonField[ COIINum][n] = 1.0e-20 * BaryonField[MetalNum][n];
-              BaryonField[  OIINum][n] = 1.0e-20 * BaryonField[MetalNum][n];
-              BaryonField[ OHIINum][n] = 1.0e-20 * BaryonField[MetalNum][n];
-              BaryonField[H2OIINum][n] = 1.0e-20 * BaryonField[MetalNum][n];
-              BaryonField[H3OIINum][n] = 1.0e-20 * BaryonField[MetalNum][n];
-              BaryonField[ O2IINum][n] = 1.0e-20 * BaryonField[MetalNum][n];
-              BaryonField[   DeNum][n] += BaryonField[CIINum][n]/12.0;
-              if (GrainGrowth || DustSublimation) {
-                if (DustSpecies > 0) {
-                   BaryonField[   MgNum][n] = Mg_frac * BaryonField[MetalNum][n];
-                }
-                if (DustSpecies > 1) {
-                   BaryonField[   AlNum][n] = Al_frac * BaryonField[MetalNum][n];
-                   BaryonField[    SNum][n] =  S_frac * BaryonField[MetalNum][n];
-                   BaryonField[   FeNum][n] = Fe_frac * BaryonField[MetalNum][n];
-                }
-              }
-            }
-            if (GrainGrowth || DustSublimation) {
-              if (DustSpecies > 0) {
-                 BaryonField[ MgSiO3Num][n] =  MgSiO3_frac * BaryonField[MetalNum][n];
-                 BaryonField[     ACNum][n] =      AC_frac * BaryonField[MetalNum][n];
-              }
-              if (DustSpecies > 1) {
-                 BaryonField[    SiMNum][n] =     SiM_frac * BaryonField[MetalNum][n];
-                 BaryonField[    FeMNum][n] =     FeM_frac * BaryonField[MetalNum][n];
-                 BaryonField[Mg2SiO4Num][n] = Mg2SiO4_frac * BaryonField[MetalNum][n];
-                 BaryonField[  Fe3O4Num][n] =   Fe3O4_frac * BaryonField[MetalNum][n];
-                 BaryonField[  SiO2DNum][n] =   SiO2D_frac * BaryonField[MetalNum][n];
-                 BaryonField[    MgONum][n] =     MgO_frac * BaryonField[MetalNum][n];
-                 BaryonField[    FeSNum][n] =     FeS_frac * BaryonField[MetalNum][n];
-                 BaryonField[  Al2O3Num][n] =   Al2O3_frac * BaryonField[MetalNum][n];
-              }
-            }
-          }
-#endif
-
 	  /* If there is a colour field, set it. */
 
 	  if (SphereUseColour)
 	    BaryonField[ColourNum][n] = colour * BaryonField[0][n];
 
-          if (UseDustDensityField) {
-            BaryonField[DustNum][n] = 0.0;
-            if (DustSpecies > 0) {
-              BaryonField[DustNum][n] +=
-                 BaryonField[ MgSiO3Num][n]
-               + BaryonField[     ACNum][n];
-            }
-            if (DustSpecies > 1) {
-              BaryonField[DustNum][n] +=
-                 BaryonField[    SiMNum][n];
-               + BaryonField[    FeMNum][n];
-               + BaryonField[Mg2SiO4Num][n];
-               + BaryonField[  Fe3O4Num][n];
-               + BaryonField[  SiO2DNum][n];
-               + BaryonField[    MgONum][n];
-               + BaryonField[    FeSNum][n];
-               + BaryonField[  Al2O3Num][n];
-            }
-          }
-
 	  /* Set Velocities. */
-
-	  for (dim = 0; dim < GridRank; dim++)
+    
+    for (dim = 0; dim < GridRank; dim++)
 	    BaryonField[ivel+dim][n] = Velocity[dim] + UniformVelocity[dim];
+    
 
 	  /* Set energy (thermal and then total if necessary). */
 
+    //if (EOSType > 0){
+    //float pressure, eint, h, cs, dpdrho, dpde;
+	  //EOS(pressure, density, eint, h, cs, dpdrho, dpde, EOSType, 1);
+	  //BaryonField[1][n] = eint;
+    //}else{
 	  BaryonField[1][n] = temperature/TemperatureUnits/ ((Gamma-1.0)*mu);
-
-    if (EOSType > 0){
-    float pressure, eint, h, cs, dpdrho, dpde;
-	  EOS(pressure, density, eint, h, cs, dpdrho, dpde, EOSType, 1);
-	  BaryonField[1][n] = eint;
-    }else{
-	  BaryonField[1][n] = temperature/TemperatureUnits/ ((Gamma-1.0)*mu);
-    }
+    //}
 
 	  if (DualEnergyFormalism)
 	    BaryonField[2][n] = BaryonField[1][n];
 
 	  if (HydroMethod != Zeus_Hydro)
 	    for (dim = 0; dim < GridRank; dim++)
-	      BaryonField[1][n] += 0.5*POW(BaryonField[ivel+dim][n], 2);
+	      BaryonField[1][n] += 0.5*pow(BaryonField[ivel+dim][n], 2);
 
 	  /* Set particles if being used (generate a number of particle
 	     proportional to density). */
@@ -1399,11 +1239,11 @@ int grid::CollapseTestInitializeGrid(int NumberOfSpheres,
 	    if (i >= GridStartIndex[0] && i <= GridEndIndex[0] &&
 		j >= GridStartIndex[1] && j <= GridEndIndex[1] &&
 		k >= GridStartIndex[2] && k <= GridEndIndex[2]  ) {
-	      ParticleCount += density/POW(float(RefineBy), GridRank*level);
+	      ParticleCount += density/pow(float(RefineBy), GridRank*level);
 	      while (ParticleCount > 1) {
 		if (SetupLoopCount > 0) {
 		  ParticleMass[npart] = ParticleMeanDensity*
-		    POW(float(RefineBy), GridRank*level);
+		    pow(float(RefineBy), GridRank*level);
 		  ParticleNumber[npart] = CollapseTestParticleCount++;
 		  ParticleType[npart] = PARTICLE_TYPE_DARK_MATTER;
 
@@ -1487,8 +1327,8 @@ float gasdev()
 double BE(double r)
 {
   double factor;
-  factor = 4.8089e-04*POW(r,5) - 1.0173e-02*POW(r,4) + 7.7899e-02*POW(r,3) - 
-    2.3299e-01*POW(r,2) + 1.4721e-02*r + 1.0008e+00;
+  factor = 4.8089e-04*pow(r,5) - 1.0173e-02*pow(r,4) + 7.7899e-02*pow(r,3) - 
+    2.3299e-01*pow(r,2) + 1.4721e-02*r + 1.0008e+00;
   return factor;
 }
 
@@ -1497,8 +1337,8 @@ double BE(double r)
 double q(double r)
 {
   double factor;
-  factor = 0.0015970*POW(r,5) - 0.0229113*POW(r,4) + 0.0386709*POW(r,3) + 
-    0.7350457*POW(r,2) - 0.5490283*r + 0.0872061;
+  factor = 0.0015970*pow(r,5) - 0.0229113*pow(r,4) + 0.0386709*pow(r,3) + 
+    0.7350457*pow(r,2) - 0.5490283*r + 0.0872061;
   return factor;
 }
 
@@ -1514,10 +1354,13 @@ double Ang(double a1, double a2, double R, double r)
 double Maxwellian(double c_tilda, double vel_unit, double mu, double gamma)
 {
   // Set constants
+  double mh = 1.67e-24;
+  double kboltz = 1.38e-16;
+  double pi = 3.14159;
 
   // Compute temperature in cgs units
   double c = c_tilda*vel_unit;
-  double T = (POW(c,2)*mu*mh)/(kboltz*gamma);
+  double T = (pow(c,2)*mu*mh)/(kboltz*gamma);
 
   // Compute random Maxwellian velocity
   double mean = 0;
@@ -1533,8 +1376,8 @@ double Maxwellian(double c_tilda, double vel_unit, double mu, double gamma)
 
 double ERF(double x)
 {
-  return (2.0 / sqrt(pi)) *
-    (x - POW(x,3)/3.0 + POW(x,5)/10.0 - POW(x,7)/42.0 + POW(x,9)/216.0);
+  return (2.0 / sqrt(M_PI)) *
+    (x - pow(x,3)/3.0 + pow(x,5)/10.0 - pow(x,7)/42.0 + pow(x,9)/216.0);
 }
 
 int ComputeRadialVelocity(float density, double mass, float r_init, 
@@ -1543,7 +1386,8 @@ int ComputeRadialVelocity(float density, double mass, float r_init,
 			  double exterior_rho[], int Npts)
 {
 
-  const float theta0 = 0.5*pi, theta1 = 1.9*pi;
+  const float theta0 = 0.5*M_PI, theta1 = 1.9*M_PI;
+  const float Grav = 6.673e-8, Mpc = 3.086e24, yr = 3.1557e7, Msun = 1.989e33;
   const float delta_i = 0.5;
   float dtheta, delta_t[NTHETA], Theta[NTHETA], Lambda[NTHETA], Chi;
   float beta[NTHETA], little_d[NTHETA];
@@ -1556,44 +1400,44 @@ int ComputeRadialVelocity(float density, double mass, float r_init,
   dtheta = (theta1 - theta0) / (NTHETA-1.0);
   for (i = 0; i < NTHETA; i++) {
     Theta[i] = theta0 + i*dtheta;
-    Lambda[i] = POW(sin(Theta[i]/2), 2) * 
-      POW((Theta[i] - sin(Theta[i])) / pi, -8.0/9);
-    delta_t[i] = 4.5 * POW((Theta[i] - sin(Theta[i])), 2) / 
-      POW((1.0 - cos(Theta[i])), 3) - 1.0;
+    Lambda[i] = pow(sin(Theta[i]/2), 2) * 
+      pow((Theta[i] - sin(Theta[i])) / M_PI, -8.0/9);
+    delta_t[i] = 4.5 * pow((Theta[i] - sin(Theta[i])), 2) / 
+      pow((1.0 - cos(Theta[i])), 3) - 1.0;
     beta[i] = sin(0.5*Theta[i]) * sin(0.5*Theta[i]);
     little_d[i] = 0.75 * (Theta[i] - sin(Theta[i]));
     if (delta_t[i] < density)
       iinit = i;
-    if (Theta[i] < pi)   // Turnaround
+    if (Theta[i] < M_PI)   // Turnaround
       iturn = i;
   }
 
-  t_init = 5.38e8 * yr_s * POW((1+InitialRedshift) / 10.0, -1.5);
-  z_vir = POW((Theta[iinit] - sin(Theta[iinit])) / (2*pi), 2.0/3.0) * 
+  t_init = 5.38e8 * yr * pow((1+InitialRedshift) / 10.0, -1.5);
+  z_vir = pow((Theta[iinit] - sin(Theta[iinit])) / (2*M_PI), 2.0/3) * 
     (1 + InitialRedshift) - 1.0;
-  t_vir = 5.38e8 * yr_s * POW((1+z_vir) / 10.0, -1.5);
+  t_vir = 5.38e8 * yr * pow((1+z_vir) / 10.0, -1.5);
   t_ta = 0.5 * t_vir;
-  t_i = t_ta * POW(delta_i, 1.5) / (3*pi/4);
-  rho_ci = 1.0 / (6 * pi * GravConst * t_i*t_i);
-  r_i = POW(mass / (4*pi/3.0 * rho_ci), 1.0/3.0);
+  t_i = t_ta * pow(delta_i, 1.5) / (3*M_PI/4);
+  rho_ci = 1.0 / (6 * M_PI * Grav * t_i*t_i);
+  r_i = pow(mass / (4*M_PI/3 * rho_ci), 1.0/3);
 
-  dm_rotvel_corr = 2 * POW(2*r_init/r_i, 2);
+  dm_rotvel_corr = 2 * pow(2*r_init/r_i, 2);
   //  dm_rotvel_corr = 1;
 
-  r_ta_now = POW((3*pi/4), -8.0/9) * POW(delta_i, 1.0/3.0) * r_i 
-    * POW(t_init / t_i, 8.0/9);
+  r_ta_now = pow((3*M_PI/4), -8.0/9) * pow(delta_i, 1.0/3) * r_i 
+    * pow(t_init / t_i, 8.0/9);
 
   for (i = 0; i < NTHETA; i++) {
     local_Vr[NTHETA-i-1] = (Lambda[i] * r_ta_now / t_init) * 
       sin(Theta[i]) * (Theta[i] - sin(Theta[i])) / 
-      POW(1.0 - cos(Theta[i]), 2);
+      pow(1.0 - cos(Theta[i]), 2);
     Vl = local_Vr[NTHETA-i-1] / (r_ta_now / t_init);
     
     // Subtract Hubble flow and convert to code units
-    local_Vr[NTHETA-i-1] = (Vl - (2.0/3.0)*Lambda[i]) * r_ta_now / t_init;
+    local_Vr[NTHETA-i-1] = (Vl - (2.0/3)*Lambda[i]) * r_ta_now / t_init;
     local_Vr[NTHETA-i-1] /= VelocityUnits;
     Chi = 1.0 - 1.5 * Vl / Lambda[i];
-    local_rho[NTHETA-i-1] = POW(little_d[i],2) / POW(beta[i],3) / 
+    local_rho[NTHETA-i-1] = pow(little_d[i],2) / pow(beta[i],3) / 
       (1.0 + 3*Chi);
     local_radius[NTHETA-i-1] = Lambda[i] * r_ta_now / LengthUnits;
     if (local_radius[NTHETA-i-1] > r_init)
@@ -1629,7 +1473,7 @@ int ComputeRadialVelocity(float density, double mass, float r_init,
       exterior_rho[i] = density;
     }
 //    printf("%"ISYM": r = %"GSYM" pc, v_r = %"GSYM" km/s, rho = %"GSYM"\n", 
-//	   i, radius_vr[i]*LengthUnits/pc, Vr[i]*VelocityUnits/1e5,
+//	   i, radius_vr[i]*LengthUnits/3.086e18, Vr[i]*VelocityUnits/1e5,
 //	   exterior_rho[i]);
   }
 

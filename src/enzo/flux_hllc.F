@@ -391,30 +391,30 @@ c     &        write (6,*) grslice(i-1,j), grslice(i,j), grslice(i+1,j)
 c
 c     Now check for negative colors (Warning only)
 c
-      do n=1, ncolor
-         do i=i1, i2
-            if (colslice(i,j,n) +
-     $           (colf(i,j,n)-colf(i+1,j,n))/dx(i)
-     $           .lt. 0._RKIND) then
-               write(6,*) 'flux_hllc: negative color',i,j,n
-               write(6,*) 'a', dx(i), colf(i-1,j,n),colf(i,j,n),
-     $              colf(i+1,j,n)
-               write(6,*) 'b', colslice(i,j,n)+(colf(i,j,n)-
-     $              colf(i+1,j,n))/dx(i),
-     $              colslice(i,j,n),
-     $              (colf(i,j,n)-colf(i+1,j,n))/dx(i)
-               write(6,*) 'c', colslice(i-1,j,n),colslice(i,j,n),
-     $              colslice(i+1,j,n)
-               write(6,*) 'd', colls(i-1,j,n),colls(i,j,n),
-     $              colls(i+1,j,n)
-               write(6,*) 'e', colrs(i-1,j,n),colrs(i,j,n),
-     $              colrs(i+1,j,n)
-               write(6,*) 'f', uls(i-1,j),uls(i,j),uls(i+1,j)
-               write(6,*) 'g', urs(i-1,j),urs(i,j),urs(i+1,j)
-               WARNING_MESSAGE
-            endif
-         enddo
-      enddo
+c      do n=1, ncolor
+c         do i=i1, i2
+c            if (colslice(i,j,n) +
+c     $           (colf(i,j,n)-colf(i+1,j,n))/dx(i)
+c     $           .lt. 0._RKIND) then
+c               write(6,*) 'flux_hllc: negative color',i,j,n
+c               write(6,*) 'a', dx(i), colf(i-1,j,n),colf(i,j,n),
+c     $              colf(i+1,j,n)
+c               write(6,*) 'b', colslice(i,j,n)+(colf(i,j,n)-
+c     $              colf(i+1,j,n))/dx(i),
+c     $              colslice(i,j,n),
+c     $              (colf(i,j,n)-colf(i+1,j,n))/dx(i)
+c               write(6,*) 'c', colslice(i-1,j,n),colslice(i,j,n),
+c     $              colslice(i+1,j,n)
+c               write(6,*) 'd', colls(i-1,j,n),colls(i,j,n),
+c     $              colls(i+1,j,n)
+c               write(6,*) 'e', colrs(i-1,j,n),colrs(i,j,n),
+c     $              colrs(i+1,j,n)
+c               write(6,*) 'f', uls(i-1,j),uls(i,j),uls(i+1,j)
+c               write(6,*) 'g', urs(i-1,j),urs(i,j),urs(i+1,j)
+c               WARNING_MESSAGE
+c            endif
+c         enddo
+c      enddo
       
       enddo                     ! j
 

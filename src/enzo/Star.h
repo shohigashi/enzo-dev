@@ -174,8 +174,7 @@ public:
 #endif
 
   Star* StarBufferToList(StarBuffer *buffer, int n);
-  void StarListToBuffer(StarBuffer *&result, int n);
-  void StarToBuffer(StarBuffer *result);
+  StarBuffer* StarListToBuffer(int n);
   
 };
 

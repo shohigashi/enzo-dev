@@ -292,8 +292,7 @@ c
      &                      distrad, diststep, distcells,
      &                      npart, xstart, ystart, zstart, ibuff,
      &                      xp, yp, zp, up, vp, wp,
-     &                      mp, tdp, tcp, metalf, type, justburn, 
-     &                      crmodel, crfeedback, cr)
+     &                      mp, tdp, tcp, metalf, type, justburn)
 
 c
 c  RELEASES "STAR" PARTICLE ENERGY, MASS AND METALS
@@ -343,9 +342,6 @@ c    yield    - fraction of stellar mass that is converted to metals
 c    distrad  - feedback distribution radius in cells
 c    diststep - distance in walking steps to deposit feedback
 c    distcells - total number of cells over which to distribute feedback
-c    crmodel   - boolean: 1 = include cosmic ray physics, 0 = no cosmic ray physics                                                
-c    crfeedback - fraction of thermal supernova energy to return as cosmic rays                                                    
-c    cr         - Cosmic ray BaryonField  
 c
 c  OUTPUTS:
 c    d,u,v,w,ge,e - modified field
@@ -371,9 +367,6 @@ c
       R_PREC    up(npart), vp(npart), wp(npart)
       R_PREC    mp(npart), tdp(npart), tcp(npart), metalf(npart)
       INTG_PREC type(npart)
-      INTG_PREC crmodel
-      R_PREC cr(nx,ny,nz)
-      R_PREC crfeedback
 c
 c  Locals
 c    (msolar_e51 is one solar rest mass energy divided by 10^51 erg)
@@ -492,22 +485,12 @@ c
                      cellstep = stepj + abs(ic-i)
                      if (cellstep .le. diststep) then
                         dratio = 1._RKIND/(d(ic,jc,kc) + distmass)
-                        if( crmodel .gt. 0 ) then
-                          te(ic,jc,kc) = ((te(ic,jc,kc)*d(ic,jc,kc)) +
-     &                          energy*(1._RKIND-crfeedback)) * dratio
-                          if (idual .eq. 1)
-     &                      ge(ic,jc,kc) =
-     &                         ((ge(ic,jc,kc)*d(ic,jc,kc)) +
-     &                         energy*(1._RKIND-crfeedback)) * dratio
-                          cr(ic,jc,kc) = cr(ic,jc,kc)+energy*crfeedback
-                        else
-                           te(ic,jc,kc) = ((te(ic,jc,kc)*d(ic,jc,kc)) +
-     &                          energy) * dratio
-                           if (idual .eq. 1)
-     &                          ge(ic,jc,kc) =
-     &                          ((ge(ic,jc,kc)*d(ic,jc,kc)) +
-     &                          energy) * dratio
-                        endif
+                        te(ic,jc,kc) = ((te(ic,jc,kc)*d(ic,jc,kc)) +
+     &                       energy) * dratio
+                        if (idual .eq. 1)
+     &                       ge(ic,jc,kc) = 
+     &                       ((ge(ic,jc,kc)*d(ic,jc,kc)) +
+     &                       energy) * dratio
 c
 c           Metal feedback (note that in this function gas metal is
 c             a fraction (rho_metal/rho_gas) rather than a density.

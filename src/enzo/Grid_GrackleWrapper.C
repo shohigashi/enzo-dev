@@ -142,7 +142,10 @@ int grid::GrackleWrapper()
 
   // Double check if there's a metal field when we have metal cooling
   if (MetalCooling && MetalFieldPresent == FALSE) {
-    ENZO_FAIL("Metal cooling is on, but no metal field present.");
+    if (debug)
+      fprintf(stderr, "Warning: No metal field found.  Turning OFF MetalCooling.\n");
+    MetalCooling = FALSE;
+    MetalNum = 0;
   }
 
   /* If both metal fields (Pop I/II and III) exist, create a field

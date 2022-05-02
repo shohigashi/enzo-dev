@@ -324,26 +324,6 @@
 
 !     --- 6 species cooling ---
 
-      if((j.eq.4).and.(k.eq.4)) then
-        i = 4
-        write(*,'(I5,8E10.3)', advance='no')
-     &    iter
-     &   ,d(i,j,k)*dbase1*0.76_RKIND/mh
-     &   ,tgas(i)
-     &   ,de(i,j,k)/d(i,j,k)/0.76_RKIND
-     &   ,HI(i,j,k)/d(i,j,k)/0.76_RKIND
-     &   ,HII(i,j,k)/d(i,j,k)/0.76_RKIND
-     &   ,HeI(i,j,k)/d(i,j,k)/0.76_RKIND/4._RKIND
-     &   ,HeII(i,j,k)/d(i,j,k)/0.76_RKIND/4._RKIND
-     &   ,HeIII(i,j,k)/d(i,j,k)/0.76_RKIND/4._RKIND
-        if (ispecies.gt.1) then
-        write(*,'(3E10.3)', advance='no')
-     &   ,HM(i,j,k)/d(i,j,k)/0.76_RKIND
-     &   ,H2I(i,j,k)/d(i,j,k)/0.76_RKIND/2._RKIND
-     &   ,H2II(i,j,k)/d(i,j,k)/0.76_RKIND/2._RKIND
-        end if
-        write(*,'(A1)', advance='yes') ' '
-      end if
       do i = is+1, ie+1
          if ( itmask(i) ) then
 
@@ -434,34 +414,7 @@
 
      &             + REAL(igammah,RKIND)*gammaha*(HI(i,j,k)+HII(i,j,k))
      &             *dom_inv)
-! modified from here
-       if((i.eq.4) .and.(j.eq.4) .and.(k.eq.4) ) then
-         write(*,*) (- comp1*(tgas(i)-comp2)*de(i,j,k)*dom_inv
-     &               - comp_xraya*(tgas(i)-comp_temp)*de(i,j,k)*dom_inv
-     &              ) / d(i,j,k) * xbase1**2/tbase1**3, redshift
-         write(*,*) (- brem(i)*(HII(i,j,k)+HeII(i,j,k)/4._RKIND +
-     &                          HeIII(i,j,k))*de(i,j,k)
-     &              ) / d(i,j,k) * xbase1**2/tbase1**3
-         write(*,*) (- ciHI  (i)*HI  (i,j,k)*de(i,j,k)
-     &              ) / d(i,j,k) * xbase1**2/tbase1**3
-         write(*,*) (- reHII  (i)*HII  (i,j,k)*de(i,j,k)
-     &              ) / d(i,j,k) * xbase1**2/tbase1**3
-         write(*,*) (- ceHI  (i)*HI  (i,j,k)*de(i,j,k)
-     &              ) / d(i,j,k) * xbase1**2/tbase1**3
-         write(*,*) (- ciHeI (i)*HeI (i,j,k)*de(i,j,k)/4._RKIND
-     &               - ciHeII(i)*HeII(i,j,k)*de(i,j,k)/4._RKIND
-     &               - ciHeIS(i)*HeII(i,j,k)*de(i,j,k)**2*dom/4._RKIND
-     &              ) / d(i,j,k) * xbase1**2/tbase1**3
-         write(*,*) (- reHeII1(i)*HeII (i,j,k)*de(i,j,k)/4._RKIND
-     &               - reHeII2(i)*HeII (i,j,k)*de(i,j,k)/4._RKIND
-     &               - reHeIII(i)*HeIII(i,j,k)*de(i,j,k)/4._RKIND
-     &              ) / d(i,j,k) * xbase1**2/tbase1**3
-         write(*,*) (- ceHeI (i)*HeII(i,j,k)*de(i,j,k)**2*dom/4._RKIND
-     &               - ceHeII(i)*HeII(i,j,k)*de(i,j,k)/4._RKIND 
-     &              ) / d(i,j,k) * xbase1**2/tbase1**3
-       end if
 
-! modification end
          if (edot(i) .ne. edot(i)) then
             write(6,*) 'NaN in edot[1a]: ', i, j, k, edot(i), 
      &           HI(i,j,k), HII(i,j,k), HeI(i,j,k), HeII(i,j,k), 
@@ -798,14 +751,6 @@ c     for radiative transfer, convert from eV/s*TimeUnits to the coolunits use
             if (itmask(i)) then
                edot(i) = edot(i) + REAL(ipiht,RKIND) * photogamma(i,j,k)
      &              * rtunits * HI(i,j,k)
-! modified from here
-      if((i.eq.4) .and.(j.eq.4) .and.(k.eq.4) ) then
-        write(*,*) (REAL(ipiht,RKIND) * photogamma(i,j,k)
-     &                * rtunits * HI(i,j,k)
-     &              ) / d(i,j,k) * xbase1**2/tbase1**3
-      end if
-! modification end
-
 c               if (photogamma(i,j,k)>0) then
 c                  print*, i,j,k,edot(i), photogamma(i,j,k),rtunits,dom,
 c     $                 aye,utim,coolunit,d(i,j,k),hi(i,j,k),tgas(i)

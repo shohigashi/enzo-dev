@@ -213,8 +213,10 @@ inline void EOS(float &p, float &rho, float &e, float &h, float &cs, float &dpdr
     }else{ 
       cs = c_s * sqrt(1.0 + gamma3*pow(rho/rho_cr3,gamma3-1.0))+(c_s2-c_s3);
     }
-    p = rho*cs*c_s;
+    p = rho*cs*cs;
     e = p / ((Gamma-1.0)*rho);
+//    dpdrho = p/rho;
+//    dpde = (Gamma - 1) * rho;
     dpdrho = 1;
     dpde = 1;
     h = e + p/rho;
@@ -226,22 +228,31 @@ inline void EOS(float &p, float &rho, float &e, float &h, float &cs, float &dpdr
 //    double c_s = EOSSoundSpeed;
     double rho_cr = EOSCriticalDensity;
     double gamma1 = EOSGamma;
-    double c_s = sqrt(200*gamma1*kboltz0/(mu0*mh0)); 
+    double c_s = sqrt(200*gamma1*kboltz0/(mu0*mh0));
     double c_s1, c_s2, p1, p2;
+    //c_s1 = sqrt(400*gamma1*kboltz0/(mu0*mh0));
     c_s /= velu;
+    //c_s1 /= velu;
     rho_cr /= denu;
-
-    if(rho <= rho_cr) {
-      cs = c_s;
-    }else { 
+    if(rho < rho_cr) {
+     cs = c_s;
+      //p = pow(cs,2)*pow(rho/rho_cr,1.0);
+    }else {
       //cs = c_s*sqrt(1.0 + gamma1*pow(rho/rho_cr, gamma1-1.0))/sqrt(1.0+gamma1);
-      cs = c_s*sqrt(pow(rho/rho_cr,gamma1-1.0));
+     cs = c_s*sqrt(pow(rho/rho_cr,gamma1-1.0));
+      //cs = c_s;
+      //p = pow(cs,2)*pow(rho/rho_cr,1.09);
 	  }
-        p = rho*cs*cs;
+    p = rho*cs*cs;
     e = p / ((Gamma-1.0)*rho);
-    dpdrho = 1;
-    dpde = 1;
-    h = e + p/rho;
+    dpdrho = p/rho;
+    dpde = (Gamma - 1) * rho;
+//    dpdrho = 1;
+//    dpde = 1;
+//    h = e + p/rho;
+//    dpdrho = pow(cs,2);
+//    dpde = (gamma1-1)*rho;
+    h = e + dpdrho;
 
   }
 

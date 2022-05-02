@@ -15,9 +15,7 @@
 #include <stdio.h>
 #include "ErrorExceptions.h"
 #include "macros_and_parameters.h"
-#include "typedefs.h"
 #include "RadiationSource.h"
-#include "global_data.h"
 
 RadiationSourceEntry* DeleteRadiationSource(RadiationSourceEntry *RS)
 {
@@ -51,19 +49,4 @@ RadiationSourceEntry* DeleteRadiationSource(RadiationSourceEntry *RS)
     delete RS;
   }
   return dummy;
-}
-
-void DeleteGlobalRadiationSources(void){
-
-  RadiationSourceEntry *dummy;
-  if (GlobalRadiationSources!=NULL){
-    dummy = GlobalRadiationSources->NextSource;
-    while (dummy != NULL) {
-      dummy = DeleteRadiationSource(dummy);
-    }
-    delete GlobalRadiationSources;
-    GlobalRadiationSources = NULL;
-  }
-
-  return;
 }

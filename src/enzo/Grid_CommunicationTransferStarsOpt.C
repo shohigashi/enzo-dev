@@ -135,16 +135,17 @@ int grid::CommunicationTransferStars(grid* Grids[], int NumberOfGrids,
 
     if (TotalToMove > PreviousTotalToMove) {
  
-      /* Move stars into list */
-
       // Increase the size of the list to include the stars from this grid
 
       star_data *NewList = new star_data[TotalToMove];
       memcpy(NewList, List, PreviousTotalToMove * sizeof(star_data));
       delete [] List;
       List = NewList;
+ 
+      /* Move stars into list */
 
       int n1 = PreviousTotalToMove;
+      StarBuffer *TempBuffer;
 
       cstar = Stars;
       Stars = NULL;
@@ -157,7 +158,8 @@ int grid::CommunicationTransferStars(grid* Grids[], int NumberOfGrids,
 	grid = ToGrid[i];
 
 	if (grid != ThisGridNum) {
-          MoveStar->StarToBuffer(&List[n1].data);
+	  TempBuffer = MoveStar->StarListToBuffer(1);
+	  List[n1].data = *TempBuffer;
 	  List[n1].grid = grid;
 	  List[n1].proc = MyProcessorNumber;
 	  n1++;

@@ -57,6 +57,7 @@ int grid::UpdateParticleVelocity(float TimeStep)
     }
  
   /* Loop over dimensions. */
+  if (NumberOfParticles > 0){  // added 
  
   for (int dim = 0; dim < GridRank; dim++) {
  
@@ -70,6 +71,13 @@ int grid::UpdateParticleVelocity(float TimeStep)
  
     if (ComovingCoordinates) {
  
+        /* If using comoving coordinates, divide by a(t) first. */
+       
+        if (CosmologyComputeExpansionFactor(Time + TimeStep, &a, &dadt)
+            == FAIL) {
+                ENZO_FAIL("Error in CsomologyComputeExpansionFactors.");
+        }
+
       coef = 0.5*dadt/a*TimeStep;
       coef1 = 1.0 - coef;
       coef2 = 1.0 / (1.0 + coef);
@@ -123,6 +131,7 @@ int grid::UpdateParticleVelocity(float TimeStep)
 	ParticleVelocity[dim][i] += ParticleAcceleration[dim][i] * TimeStep;
  
   }
+ }    // added
 
 
   if (ProblemType == 29)
@@ -132,6 +141,7 @@ int grid::UpdateParticleVelocity(float TimeStep)
              ParticleVelocity[0][i], ParticleVelocity[1][i], ParticleVelocity[2][i]);
 
     if (NumberOfActiveParticles > 0) {
+
       if (ComovingCoordinates) {
         if (CosmologyComputeExpansionFactor(Time + TimeStep, &a, &dadt)
             == FAIL) {
