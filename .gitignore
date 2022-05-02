@@ -10,6 +10,7 @@ syntax: glob
 *.ipch
 .vscode
 
+
 bin/enzo
 bin/inits
 TAGS
@@ -28,6 +29,7 @@ temp.show-*
 Make.config.machine
 Make.config.override
 *.mod
+run/*
 
 src/mpgrafic/degraf/Makefile
 src/mpgrafic/degraf/config.h
